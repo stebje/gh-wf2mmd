@@ -1,0 +1,38 @@
+name: Complex Workflow
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: npm run lint
+
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm run test:unit
+
+  test-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm run test:integration
+
+  build:
+    needs: [lint, test-unit, test-integration]
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm run build
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - run: deploy staging
+
+  deploy-production:
+    needs: [build, deploy-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - run: deploy production
