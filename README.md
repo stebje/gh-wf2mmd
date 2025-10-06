@@ -234,9 +234,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 [MIT License](LICENSE)
 
-## Author
+## Author / Maintainer
 
-**Stefan Berger** ([@stebje](https://github.com/stebje))
+**Steffen Bjerkenås** ([@stebje](https://github.com/stebje))
 
 ## Acknowledgments
 
