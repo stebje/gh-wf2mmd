@@ -17,6 +17,7 @@ gh wf-to-mmd examples/simple.yml
 ### `complex.yml`
 A more complex workflow demonstrating:
 - Parallel jobs (`lint`, `test-unit`, `test-integration`)
+- Matrix strategy job (`test-matrix` - runs 6 combinations: 3 Node versions × 2 operating systems)
 - Fan-in pattern (multiple jobs feeding into `build`)
 - Fan-out pattern (`build` feeding into multiple deploy jobs)
 - Multiple dependencies
@@ -26,6 +27,10 @@ A more complex workflow demonstrating:
 gh wf-to-mmd examples/complex.yml
 gh wf-to-mmd --orientation LR examples/complex.yml
 ```
+
+**Features visualized:**
+- Matrix jobs are shown with a layered box shape (📦) indicating the number of parallel runs
+- Dependencies flow from tests → build → deployments
 
 ## Usage
 

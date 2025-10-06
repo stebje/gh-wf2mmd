@@ -1,6 +1,10 @@
 package models
 
-import "gopkg.in/yaml.v3"
+import (
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+)
 
 // Workflow represents the GitHub Actions workflow structure
 type Workflow struct {
@@ -12,7 +16,46 @@ type Workflow struct {
 type Job struct {
 	RunsOn   string    `yaml:"runs-on"`
 	NeedsRaw yaml.Node `yaml:"needs"`
+	Strategy Strategy  `yaml:"strategy"`
 	needs    []string  // parsed value
+}
+
+// Strategy represents the strategy configuration for a job
+type Strategy struct {
+	Matrix map[string]interface{} `yaml:"matrix"`
+}
+
+// HasMatrix returns true if the job uses a matrix strategy
+func (j *Job) HasMatrix() bool {
+	return len(j.Strategy.Matrix) > 0
+}
+
+// GetMatrixDimensions returns a string describing the matrix dimensions
+// e.g., "3x2" for 3 node versions and 2 operating systems
+func (j *Job) GetMatrixDimensions() string {
+	if !j.HasMatrix() {
+		return ""
+	}
+
+	var dimensions []int
+	for _, value := range j.Strategy.Matrix {
+		switch v := value.(type) {
+		case []interface{}:
+			dimensions = append(dimensions, len(v))
+		}
+	}
+
+	if len(dimensions) == 0 {
+		return ""
+	}
+
+	// Calculate total combinations
+	total := 1
+	for _, dim := range dimensions {
+		total *= dim
+	}
+
+	return fmt.Sprintf("%d jobs", total)
 }
 
 // GetNeeds returns the job dependencies as a slice

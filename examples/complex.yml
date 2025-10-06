@@ -19,8 +19,17 @@ jobs:
     steps:
       - run: npm run test:integration
 
+  test-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - run: npm test
+
   build:
-    needs: [lint, test-unit, test-integration]
+    needs: [lint, test-unit, test-integration, test-matrix]
     runs-on: ubuntu-latest
     steps:
       - run: npm run build

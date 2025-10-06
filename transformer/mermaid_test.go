@@ -106,52 +106,68 @@ func TestToMermaid(t *testing.T) {
     job3
 `,
 		},
+		{
+			name: "matrix job with dependencies",
+			workflow: &models.Workflow{
+				Name: "Matrix",
+				Jobs: map[string]models.Job{
+					"test": {
+						RunsOn: "ubuntu-latest",
+						Strategy: models.Strategy{
+							Matrix: map[string]interface{}{
+								"node-version": []interface{}{18, 20, 22},
+								"os":           []interface{}{"ubuntu-latest", "windows-latest"},
+							},
+						},
+					},
+					"build": {
+						RunsOn:   "ubuntu-latest",
+						NeedsRaw: stringToYAMLNode("test"),
+					},
+				},
+			},
+			level:       Simple,
+			orientation: TopToBottom,
+			want: `flowchart TB
+    test@{ shape: procs, label: "test\n(6 jobs)"}
+    test --> build
+`,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ToMermaid(tt.workflow, tt.level, tt.orientation)
 
-			// For tests with deterministic order (linear workflows), compare directly
-			// For tests with maps (parallel jobs), just check that all expected lines are present
-			if strings.Contains(tt.name, "parallel") || strings.Contains(tt.name, "independent") {
-				// Check that all expected lines are present (order may vary due to map iteration)
-				gotLines := strings.Split(strings.TrimSpace(got), "\n")
-				wantLines := strings.Split(strings.TrimSpace(tt.want), "\n")
+			// Since map iteration order is non-deterministic, we need to check content, not exact order
+			// We'll verify that all expected lines exist
+			gotLines := strings.Split(strings.TrimSpace(got), "\n")
+			wantLines := strings.Split(strings.TrimSpace(tt.want), "\n")
 
-				if len(gotLines) != len(wantLines) {
-					t.Errorf("ToMermaid() line count mismatch:\nGot %d lines:\n%s\n\nWant %d lines:\n%s",
-						len(gotLines), got, len(wantLines), tt.want)
-					return
+			if len(gotLines) != len(wantLines) {
+				t.Errorf("ToMermaid() line count mismatch:\nGot %d lines:\n%s\n\nWant %d lines:\n%s",
+					len(gotLines), got, len(wantLines), tt.want)
+				return
+			}
+
+			// Check header is correct
+			if strings.TrimSpace(gotLines[0]) != strings.TrimSpace(wantLines[0]) {
+				t.Errorf("ToMermaid() header mismatch:\nGot:  %s\nWant: %s", gotLines[0], wantLines[0])
+			}
+
+			// Check all expected lines exist (ignoring order)
+			gotSet := make(map[string]bool)
+			for _, line := range gotLines[1:] {
+				trimmed := strings.TrimSpace(line)
+				if trimmed != "" {
+					gotSet[trimmed] = true
 				}
+			}
 
-				// Check header is correct
-				if strings.TrimSpace(gotLines[0]) != strings.TrimSpace(wantLines[0]) {
-					t.Errorf("ToMermaid() header mismatch:\nGot:  %s\nWant: %s", gotLines[0], wantLines[0])
-				}
-
-				// Check all expected lines exist (ignoring order)
-				gotSet := make(map[string]bool)
-				for _, line := range gotLines[1:] {
-					trimmed := strings.TrimSpace(line)
-					if trimmed != "" {
-						gotSet[trimmed] = true
-					}
-				}
-
-				for _, line := range wantLines[1:] {
-					trimmed := strings.TrimSpace(line)
-					if trimmed != "" && !gotSet[trimmed] {
-						t.Errorf("ToMermaid() missing line: %s\nGot:\n%s", trimmed, got)
-					}
-				}
-			} else {
-				// For linear workflows, do exact comparison
-				gotNorm := normalizeWhitespace(got)
-				wantNorm := normalizeWhitespace(tt.want)
-
-				if gotNorm != wantNorm {
-					t.Errorf("ToMermaid() mismatch:\nGot:\n%s\n\nWant:\n%s", got, tt.want)
+			for _, line := range wantLines[1:] {
+				trimmed := strings.TrimSpace(line)
+				if trimmed != "" && !gotSet[trimmed] {
+					t.Errorf("ToMermaid() missing line: %s\nGot:\n%s", trimmed, got)
 				}
 			}
 		})
@@ -178,18 +194,4 @@ func arrayToYAMLNode(arr []string) yaml.Node {
 		}
 	}
 	return node
-}
-
-// normalizeWhitespace normalizes whitespace for comparison
-// This allows us to ignore minor formatting differences
-func normalizeWhitespace(s string) string {
-	lines := strings.Split(s, "\n")
-	var normalized []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" {
-			normalized = append(normalized, trimmed)
-		}
-	}
-	return strings.Join(normalized, "\n")
 }

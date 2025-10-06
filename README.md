@@ -88,8 +88,14 @@ jobs:
     runs-on: ubuntu-latest
   test-integration:
     runs-on: ubuntu-latest
+  test-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+        os: [ubuntu-latest, windows-latest]
   build:
-    needs: [lint, test-unit, test-integration]
+    needs: [lint, test-unit, test-integration, test-matrix]
     runs-on: ubuntu-latest
   deploy-staging:
     needs: build
@@ -110,13 +116,17 @@ flowchart LR
     lint
     test-unit
     test-integration
+    test-matrix@{ shape: procs, label: "test-matrix\n(6 jobs)"}
     lint --> build
     test-unit --> build
     test-integration --> build
+    test-matrix --> build
     build --> deploy-staging
     build --> deploy-production
     deploy-staging --> deploy-production
 ```
+
+**Note:** Matrix jobs are shown with a layered box shape indicating they run multiple parallel instances.
 
 ## Viewing Mermaid Diagrams
 
@@ -157,6 +167,7 @@ Then view on GitHub!
 - ✅ Generate Mermaid flowchart diagrams
 - ✅ Visualize job dependencies (`needs`)
 - ✅ Support for multiple dependencies (fan-in/fan-out patterns)
+- ✅ **Matrix strategy visualization** - Matrix jobs shown with layered box shape and job count
 - ✅ Configurable orientation (TB/LR)
 - ✅ Output to stdout or file
 
@@ -165,7 +176,6 @@ Then view on GitHub!
 - 🔄 `--level normal`: Include job metadata (runs-on, conditions)
 - 🔄 `--level detailed`: Include step information
 - 🔄 Workflow trigger visualization
-- 🔄 Matrix strategy support
 - 🔄 Conditional job visualization (`if:` conditions)
 - 🔄 Reusable workflow support
 
