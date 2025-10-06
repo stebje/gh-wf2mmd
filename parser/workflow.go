@@ -15,7 +15,9 @@ func ParseWorkflowFile(filepath string) (*models.Workflow, error) {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
+	// Declare workflow var with zero values
 	var workflow models.Workflow
+
 	if err := yaml.Unmarshal(data, &workflow); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
