@@ -1,63 +1,23 @@
-# Example Workflows
+# Examples
 
-This directory contains example GitHub Actions workflow files for demonstrating `gh-wf-to-mmd`.
+Sample workflows and the diagrams `gh wf2mmd` generates for them. The `.md` files render as diagrams on GitHub.
 
-## Examples
+| Workflow | `simple` | `detailed` |
+|----------|----------|------------|
+| [simple.yml](simple.yml): three jobs in a chain | [simple.md](simple.md) | [simple-detailed.md](simple-detailed.md) |
+| [complex.yml](complex.yml): parallel jobs, a matrix, a reusable workflow, and conditional deployments to environments | [complex.md](complex.md) | [complex-detailed.md](complex-detailed.md) |
 
-### `simple.yml`
-A basic linear workflow demonstrating:
-- Sequential job dependencies (`build` → `test` → `deploy`)
-- Simple dependency chain
-
-**Try it:**
-```bash
-gh wf-to-mmd examples/simple.yml
-```
-
-### `complex.yml`
-A more complex workflow demonstrating:
-- Parallel jobs (`lint`, `test-unit`, `test-integration`)
-- Matrix strategy job (`test-matrix` - runs 6 combinations: 3 Node versions × 2 operating systems)
-- Fan-in pattern (multiple jobs feeding into `build`)
-- Fan-out pattern (`build` feeding into multiple deploy jobs)
-- Multiple dependencies
-
-**Try it:**
-```bash
-gh wf-to-mmd examples/complex.yml
-gh wf-to-mmd --orientation LR examples/complex.yml
-```
-
-**Features visualized:**
-- Matrix jobs are shown with a layered box shape (📦) indicating the number of parallel runs
-- Dependencies flow from tests → build → deployments
-
-## Usage
-
-From the project root:
+Try them from the repository root:
 
 ```bash
-# Build the tool
 go build
-
-# Try the examples
-./gh-wf-to-mmd examples/simple.yml
-./gh-wf-to-mmd --orientation LR examples/complex.yml
-./gh-wf-to-mmd --output diagram.mmd examples/simple.yml
+./gh-wf2mmd examples/complex.yml
+./gh-wf2mmd examples/complex.yml --level detailed --direction LR
+./gh-wf2mmd examples/complex.yml -o diagram.md
 ```
 
-## Testing
+The diagrams double as golden files for the tests (`TestExamples` in [main_test.go](../main_test.go)). After an intended change to the output, regenerate them with:
 
 ```bash
-# Run all tests
-go test ./...
-
-# Run tests with verbose output
-go test ./... -v
-
-# Run tests with coverage
-go test ./... -cover
-
-# Build and test
-go build && ./gh-wf-to-mmd examples/simple.yml
+go test . -update
 ```

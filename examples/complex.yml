@@ -1,47 +1,67 @@
 name: Complex Workflow
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm run lint
 
   test-unit:
     runs-on: ubuntu-latest
     steps:
-      - run: npm run test:unit
+      - uses: actions/checkout@v4
+      - name: Unit tests
+        run: npm run test:unit
 
   test-integration:
     runs-on: ubuntu-latest
     steps:
-      - run: npm run test:integration
+      - uses: actions/checkout@v4
+      - name: Integration tests
+        run: npm run test:integration
 
   test-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         node-version: [18, 20, 22]
         os: [ubuntu-latest, windows-latest]
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
       - run: npm test
 
+  security:
+    uses: ./.github/workflows/security-scan.yml
+
   build:
-    needs: [lint, test-unit, test-integration, test-matrix]
+    needs: [lint, test-unit, test-integration, test-matrix, security]
     runs-on: ubuntu-latest
     steps:
-      - run: npm run build
+      - uses: actions/checkout@v4
+      - run: |
+          npm ci
+          npm run build
 
   deploy-staging:
     needs: build
     runs-on: ubuntu-latest
+    environment: staging
     steps:
-      - run: deploy staging
+      - run: ./deploy.sh staging
 
   deploy-production:
     needs: [build, deploy-staging]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: production
     steps:
-      - run: deploy production
+      - run: ./deploy.sh production

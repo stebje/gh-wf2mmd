@@ -1,4 +1,4 @@
-module github.com/stebje/gh-wf-to-mmd
+module github.com/stebje/gh-wf2mmd
 
 go 1.23.3
 

@@ -1,232 +1,107 @@
-# gh-wf-to-mmd
+# gh-wf2mmd
 
-A GitHub CLI extension that converts GitHub Actions workflow files into Mermaid diagrams.
+A [GitHub CLI](https://cli.github.com/) extension that draws GitHub Actions workflows as [Mermaid](https://mermaid.js.org/) flowcharts, ready to drop into a README, pull request, issue, or wiki page.
 
-## Overview
+```mermaid
+---
+title: "Complex Workflow"
+---
+flowchart TB
+    lint["lint"]
+    test_unit["test-unit"]
+    test_integration["test-integration"]
+    test_matrix@{ shape: procs, label: "test-matrix<br>6 jobs" }
+    security[["security"]]
+    build["build"]
+    deploy_staging["deploy-staging"]
+    deploy_production["deploy-production"]
+    lint --> build
+    test_unit --> build
+    test_integration --> build
+    test_matrix --> build
+    security --> build
+    build --> deploy_staging
+    build --> deploy_production
+    deploy_staging --> deploy_production
+```
 
-`gh-wf-to-mmd` takes a GitHub Actions workflow YAML file and generates a Mermaid flowchart diagram that visualizes the job dependencies and workflow structure. Perfect for documentation, presentations, or understanding complex workflows at a glance.
+_Generated from [examples/complex.yml](examples/complex.yml). See the same workflow at the [detailed level](examples/complex-detailed.md)._
 
 ## Installation
 
-### As a GitHub CLI Extension
-
 ```bash
-gh extension install stebje/gh-wf-to-mmd
-```
-
-### Manual Installation
-
-```bash
-git clone https://github.com/stebje/gh-wf-to-mmd.git
-cd gh-wf-to-mmd
-go build
+gh extension install stebje/gh-wf2mmd
 ```
 
 ## Usage
 
-### Basic Usage
-
 ```bash
-# Output to stdout
-gh wf-to-mmd path/to/workflow.yml
+# Print the diagram
+gh wf2mmd .github/workflows/ci.yml
 
-# Output to file
-gh wf-to-mmd --output diagram.mmd path/to/workflow.yml
+# Write a Markdown file with the diagram in a mermaid code block
+gh wf2mmd .github/workflows/ci.yml -o docs/ci.md
 
-# Left-to-right orientation
-gh wf-to-mmd --orientation LR path/to/workflow.yml
+# Preview what would be written, without writing anything
+gh wf2mmd .github/workflows/ci.yml -o docs/ci.md --dry-run
+
+# Add triggers, conditions, runners, environments and steps, laid out left to right
+gh wf2mmd .github/workflows/ci.yml --level detailed --direction LR
+
+# Draw a workflow from any repository you can read, without cloning it
+gh api repos/OWNER/REPO/contents/.github/workflows/ci.yml \
+  -H "Accept: application/vnd.github.raw" | gh wf2mmd -
 ```
-
-### Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--level` | `simple` | Detail level (currently only `simple` supported) |
-| `--output` | `-` | Output file path (`-` for stdout) |
-| `--orientation` | `TB` | Flowchart orientation (`TB` for top-to-bottom, `LR` for left-to-right) |
+| `-o`, `--output <file>` | stdout | Write to a file. `.md` and `.markdown` files get the diagram inside a `mermaid` code block; any other file gets plain Mermaid. |
+| `-l`, `--level <level>` | `simple` | Level of detail: `simple` or `detailed` (see below). |
+| `-d`, `--direction <dir>` | `TB` | `TB` (top to bottom) or `LR` (left to right). |
+| `--dry-run` | | Print what `--output` would contain instead of writing it. |
 
-## Examples
+Flags can go before or after the workflow file. Pass `-` as the file to read the workflow from stdin. The output is deterministic, so regenerating a diagram for an unchanged workflow produces no diff.
 
-### Simple Linear Workflow
+### Detail levels
 
-**Input:** [`examples/simple.yml`](examples/simple.yml)
+- **`simple`** shows the jobs and the `needs` dependencies between them: the shape of the workflow at a glance.
+- **`detailed`** also shows the events that trigger the workflow, each job's `runs-on`, `environment`, `if` condition and called reusable workflow, and its steps (by name, action, or the first line of the script). Long conditions and scripts are shortened to keep nodes readable.
 
-```yaml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-  test:
-    needs: build
-    runs-on: ubuntu-latest
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-```
+### Reading the diagram
 
-**Command:**
-```bash
-gh wf-to-mmd examples/simple.yml
-```
+| Element | Meaning |
+|---------|---------|
+| Rectangle | A job, labeled with its `name` (or its ID if it has no name) |
+| Stacked rectangles | A matrix job, with the number of jobs it expands to, or just "matrix" if the matrix is computed at runtime |
+| Rectangle with side bars | A job that calls a reusable workflow (`uses:`) |
+| Rounded box (detailed) | The events that trigger the workflow |
+| Dotted arrow (detailed) | The job only runs when its `if` condition holds |
 
-**Output:**
-```mermaid
-flowchart TB
-    build
-    build --> test
-    test --> deploy
-```
+### Viewing the output
 
-### Complex Workflow with Parallel Jobs
-
-**Input:** [`examples/complex.yml`](examples/complex.yml)
-
-```yaml
-jobs:
-  lint:
-    runs-on: ubuntu-latest
-  test-unit:
-    runs-on: ubuntu-latest
-  test-integration:
-    runs-on: ubuntu-latest
-  test-matrix:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18, 20, 22]
-        os: [ubuntu-latest, windows-latest]
-  build:
-    needs: [lint, test-unit, test-integration, test-matrix]
-    runs-on: ubuntu-latest
-  deploy-staging:
-    needs: build
-    runs-on: ubuntu-latest
-  deploy-production:
-    needs: [build, deploy-staging]
-    runs-on: ubuntu-latest
-```
-
-**Command:**
-```bash
-gh wf-to-mmd --orientation LR examples/complex.yml
-```
-
-**Output:**
-```mermaid
-flowchart LR
-    lint
-    test-unit
-    test-integration
-    test-matrix@{ shape: procs, label: "test-matrix\n(6 jobs)"}
-    lint --> build
-    test-unit --> build
-    test-integration --> build
-    test-matrix --> build
-    build --> deploy-staging
-    build --> deploy-production
-    deploy-staging --> deploy-production
-```
-
-**Note:** Matrix jobs are shown with a layered box shape indicating they run multiple parallel instances.
-
-## Viewing Mermaid Diagrams
-
-### Option 1: Mermaid Live Editor
-
-Copy the output and paste it into [mermaid.live](https://mermaid.live)
-
-```bash
-gh wf-to-mmd workflow.yml | pbcopy
-```
-
-### Option 2: VS Code
-
-Install the [Mermaid Preview extension](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid) and save to a `.mmd` or `.md` file:
-
-```bash
-gh wf-to-mmd --output diagram.mmd workflow.yml
-code diagram.mmd
-```
-
-### Option 3: GitHub Markdown
-
-Save to a markdown file with mermaid code blocks:
-
-````bash
-echo '```mermaid' > diagram.md
-gh wf-to-mmd workflow.yml >> diagram.md
-echo '```' >> diagram.md
-````
-
-Then view on GitHub!
-
-## Features
-
-### Current Features (v0.1.0)
-
-- ✅ Parse GitHub Actions workflow YAML files
-- ✅ Generate Mermaid flowchart diagrams
-- ✅ Visualize job dependencies (`needs`)
-- ✅ Support for multiple dependencies (fan-in/fan-out patterns)
-- ✅ **Matrix strategy visualization** - Matrix jobs shown with layered box shape and job count
-- ✅ Configurable orientation (TB/LR)
-- ✅ Output to stdout or file
-
-### Planned Features
-
-- 🔄 `--level normal`: Include job metadata (runs-on, conditions)
-- 🔄 `--level detailed`: Include step information
-- 🔄 Workflow trigger visualization
-- 🔄 Conditional job visualization (`if:` conditions)
-- 🔄 Reusable workflow support
+- **GitHub** renders `mermaid` code blocks in Markdown files, issues, pull requests, discussions and wikis, so `-o something.md` produces a file that renders as a diagram on GitHub.
+- **[mermaid.live](https://mermaid.live)** previews plain output and exports it as SVG or PNG: `gh wf2mmd ci.yml | pbcopy` (macOS), then paste.
+- **VS Code** previews `.md` output with an extension such as [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid).
 
 ## Development
 
-### Prerequisites
-
-- Go 1.23.3 or later
-
-### Building
+Requires Go 1.23.3 or later.
 
 ```bash
-go build
+go build                 # build ./gh-wf2mmd
+go test ./...            # run the tests
+go test . -update        # regenerate the example diagrams after changing the output
+gh extension install .   # use your local build as `gh wf2mmd`
 ```
 
-### Testing
-
-```bash
-# Run all tests
-go test ./...
-
-# Run with verbose output
-go test ./... -v
-
-# Run with coverage
-go test ./... -cover
-
-# Generate coverage report
-go test ./... -coverprofile=coverage.out
-go tool cover -html=coverage.out
+```
+main.go             CLI: flags, input and output
+internal/workflow/  Parses workflow YAML: jobs, needs, matrix, triggers, steps
+internal/mermaid/   Draws a parsed workflow as a Mermaid flowchart
+examples/           Sample workflows and their diagrams, also used as golden test files
 ```
 
-### Project Structure
-
-```
-gh-wf-to-mmd/
-├── models/           # Data structures for workflows
-├── parser/           # YAML parsing logic
-├── transformer/      # Mermaid diagram generation
-├── renderer/         # Output handling
-├── examples/         # Example workflow files
-└── main.go          # CLI entry point
-```
-
-### Adding New Features
-
-1. Write tests first in the appropriate `*_test.go` file
-2. Run tests: `go test ./... -v`
-3. Implement the feature
-4. Verify tests pass
-5. Check coverage: `go test ./... -cover`
+Pushing a `v*` tag publishes a release with binaries for all platforms through [cli/gh-extension-precompile](https://github.com/cli/gh-extension-precompile).
 
 ## Contributing
 
@@ -253,7 +128,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - Built with the [GitHub CLI](https://cli.github.com/)
 - Generates diagrams for [Mermaid](https://mermaid.js.org/)
 - Inspired by the need to visualize complex GitHub Actions workflows
-
----
-
-**Note:** This tool currently supports simple job dependency visualization. More advanced features (steps, conditions, triggers) are planned for future releases.
