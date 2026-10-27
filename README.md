@@ -1,4 +1,4 @@
-# gh-wf2mmd
+# GitHub Actions workflow --> Mermaid (`gh-wf2mmd`)
 
 A [GitHub CLI](https://cli.github.com/) extension that draws GitHub Actions workflows as [Mermaid](https://mermaid.js.org/) flowcharts, ready to drop into a README, pull request, issue, or wiki page.
 
