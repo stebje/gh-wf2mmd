@@ -1,5 +1,7 @@
 # GitHub Actions workflow --> Mermaid (`gh-wf2mmd`)
 
+<img width="1280" height="640" alt="proposal-c-social-preview" src="https://github.com/user-attachments/assets/7bd9feb9-7788-4bba-9c2a-6427edc3e784" />
+
 A [GitHub CLI](https://cli.github.com/) extension that draws GitHub Actions workflows as [Mermaid](https://mermaid.js.org/) flowcharts, ready to drop into a README, pull request, issue, or wiki page.
 
 ```mermaid
